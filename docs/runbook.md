@@ -165,3 +165,58 @@ python3 -m json.tool .claude/settings.json > /dev/null && echo ok
 
 If the `diff` on the twins reports anything other than the mirroring comment,
 an edit was applied to one file and not the other.
+
+## 9. Running the suite where PHP has no `pdo_sqlite`
+
+The whole panel reads SQLite, so **without `pdo_sqlite` the suite does not fail
+— it skips**, and a skipped suite reports the same cheerful green as a passing
+one. On a workstation without the extension that is 62 of the 89 cases: every
+feature test, the availability guard, the seeded fixture and the schema probe.
+Only the pure-maths units run.
+
+Check first, and believe the answer:
+
+```bash
+php -m | grep -i pdo_sqlite || echo 'MISSING: the suite will skip, not fail'
+```
+
+If it is missing and you can install it, that is the better fix
+(`apt install php8.4-sqlite3`, then restart PHP-FPM). Where you cannot — a
+machine whose PHP is managed elsewhere, or one that deliberately has no SQLite —
+run the suite in a container instead. The official `php:8.4-cli` image ships
+`pdo_sqlite` and `mbstring` already, so nothing has to be built:
+
+```bash
+cd /path/to/ai-memory-web
+
+# the suite
+docker run --rm -v "$PWD":/app -w /app --user "$(id -u):$(id -g)" php:8.4-cli \
+  sh -c 'php artisan config:clear --ansi >/dev/null && php vendor/bin/phpunit'
+
+# the linter
+docker run --rm -v "$PWD":/app -w /app --user "$(id -u):$(id -g)" php:8.4-cli \
+  php vendor/bin/pint --test
+```
+
+Three things about that command line are load-bearing:
+
+- **`--user "$(id -u):$(id -g)"`** — without it the container runs as root and
+  every file it writes (`bootstrap/cache`, `storage/logs`, anything Pint fixes)
+  comes back owned by root, inside your working copy.
+- **Not root** is also what lets `AiMemoryDatabaseTest` run at all: it drops a
+  directory to `0555` to reproduce the WAL permission failure, and root ignores
+  permission bits, so those 8 cases skip when the process is root
+  ([permissions.md](permissions.md) §6).
+- **`vendor/` is mounted, not installed** — it is pure PHP, so the host's
+  `composer install` is what the container uses. No `composer` step is needed
+  inside it.
+
+A healthy run today is **89 tests, 201 assertions, 1 skipped**. The one skip is
+`AiMemorySchemaCanaryTest`, disarmed on purpose until there is a real index to
+point it at:
+
+```bash
+AI_MEMORY_CANARY_PATH=/opt/ai-memory/data/db/memory.sqlite php artisan test
+```
+
+Any other skip means the environment is lying to you about being green.

@@ -7,6 +7,88 @@ literally the commit subject.**
 Bodies are narrative: what changed, why, and what was measured. This file is
 never rewritten.
 
+## 0.1.2 - a seeded index renders every screen in the suite
+
+Until now the only way to know whether a screen rendered was to point the panel
+at a production `memory.sqlite`. `AiMemoryDatabaseTest` did build a real WAL
+database, but a deliberately minimal one — six tables carrying the three or four
+columns the availability guard touches, and no row worth reading. It proves the
+guard degrades; it cannot render anything.
+
+`Tests\Support\SeedsAiMemoryIndex` is the other half: a WAL index in a temporary
+directory, with the tables and columns the panel actually queries, and rows
+chosen for the cases that break on empty data. A page with three versions of the
+same `(workspace, project, path)`, so the history list has a chain to walk. A
+session with no `ended_at`. A handoff whose `open_questions`, `next_steps` and
+`files_touched` are populated, since the listing only counts them and the detail
+screen decodes them. A page with an empty body, one `pinned`, one on the
+`procedural` tier the view's chip map does not know. Four `links` rows — resolved
+in-project, resolved cross-project, unresolved (`to_page_id IS NULL`), and one
+pointing back — plus `audit_log` and `client_activity`, none of which any screen
+reads yet.
+
+Ids are 16 bytes, because `lower(hex(id))` has to be the 32 characters the
+`[0-9a-fA-F]{32}` route constraint accepts; a shorter BLOB makes every detail
+route 404 and the failure reads like a missing row.
+
+**Thirteen screens, not nine.** `routes/web.php` serves 8 listings and 5 detail
+screens (plus `/live`, which is JSON). `AiMemoryScreensTest` covers all 13, each
+asserting a string that could only have come from the fixture, so a screen that
+renders its chrome and drops its content fails. A guard test asserts the count,
+so screen number 14 cannot arrive without coverage. `PanelAccessTest::panelRoutes()`
+went from 8 routes to 13: the five detail routes had no test that a guest is
+turned away from them.
+
+**The fixture is a hand-written transcription, and that is a risk with a name.**
+The DDL was written against ai-memory 2.0.2; the server this panel is meant to
+read reports 2.0.0, and the equivalence has not been verified — no query has
+ever run against the production index from this repository. If upstream renames
+a column, the fixture keeps the old name and the suite stays green while
+production breaks.
+
+**And the dashboard cannot be the thing that notices.** `StatsRepository::counts()`
+swallows "no such table/column" on purpose, so that an ai-memory old enough to
+lack `page_embeddings` or `auto_improve_proposals` does not take the screen down
+— which means a column renamed out from under the panel surfaces there as a
+zero, not as an error. That deliberate tolerance is the whole justification for
+a canary: something has to fail loudly where the totals are designed to stay
+quiet.
+
+`AiMemorySchemaCanaryTest` is that something: point `AI_MEMORY_CANARY_PATH` at a
+real index and every repository read runs against the real schema. It is skipped
+everywhere today, because which index this panel reads is still an open
+question.
+
+An alarm nobody has seen ring is not an alarm, so the canary has its own test.
+`AiMemorySchemaProbeTest` builds the same fixture with `pages.path` renamed and
+asserts the probe goes red — and, separately, that `StatsRepository::counts()`
+stays *quiet* about it, since it swallows "no such table/column" on purpose so
+an older ai-memory does not take the dashboard down. That tolerance is exactly
+why the dashboard cannot be what notices drift.
+
+Measured: the suite went from 55 cases (28 of them skipped wherever `pdo_sqlite`
+is absent) to **89 cases and 201 assertions**, with **1 skip** — the disarmed
+canary. Run under PHP 8.4.23 with `pdo_sqlite`; `pint --test` clean.
+
+[docs/runbook.md](docs/runbook.md) gains section 9, because the machine this was
+built on has no `pdo_sqlite` and will not get one: it documents running the suite
+in a `php:8.4-cli` container with the caller's uid, why `--user` is load-bearing
+in both directions (no root-owned files in the working copy, and
+`AiMemoryDatabaseTest` needs a non-root process to reproduce a permission
+failure at all), and what a healthy run looks like — so the next session does not
+rediscover that 62 skips read exactly like green.
+
+`.gitignore` now covers `/.continue/MELHORIAS-*.md`. Planning material for this
+panel is written in pt-BR and lives outside the repository; a copy has landed in
+`.continue/` twice, and ADR-005 does not have an exception for a file someone
+meant to keep local.
+
+Two things this entry does not fix, on purpose. The README still says "Nine
+screens" and `docs/what-ai-memory-collects.md` §5 lists 12, missing the Project
+detail screen; that same file says `importance` is 0-10 where the upstream
+CHECK is `BETWEEN 1 AND 10`. Those are documentation corrections and travel
+separately.
+
 ## 0.1.1 - the git hooks are regenerated from repodocs
 
 Both hooks of the standard now run here: `commit-msg`, which checks the shape of

@@ -31,16 +31,32 @@ class PanelAccessTest extends TestCase
         parent::setUp();
     }
 
+    /**
+     * All 13 HTML screens — the 8 listings and the 5 detail ones.
+     *
+     * The detail routes were missing here, so nothing asserted that a guest is
+     * turned away from them. They are reachable in both tests below because
+     * `screen()` short-circuits on an unreachable index and returns the notice
+     * BEFORE the closure runs — so the `abort_if(..., 404)` for a missing row
+     * is never evaluated. The id only has to satisfy the route constraint.
+     */
     public static function panelRoutes(): array
     {
+        $hexId = '0191f0a1000170008000000000000023';
+
         return [
             'dashboard' => ['/'],
             'projects' => ['/projects'],
+            'project' => ['/projects/'.$hexId],
             'workspaces' => ['/workspaces'],
             'pages' => ['/pages'],
+            'page' => ['/pages/'.$hexId],
             'sessions' => ['/sessions'],
+            'session' => ['/sessions/'.$hexId],
             'observations' => ['/observations'],
+            'observation' => ['/observations/'.$hexId],
             'handoffs' => ['/handoffs'],
+            'handoff' => ['/handoffs/'.$hexId],
             'search' => ['/search'],
         ];
     }

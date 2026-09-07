@@ -25,3 +25,9 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Planning material is written in pt-BR and lives OUTSIDE this repository
+# (~/x/SHVIA/), because ADR-005 requires English for everything that is in it —
+# documents included. A MELHORIAS-*.md has landed in .continue/ twice already;
+# the queue itself (.continue/README.md) stays tracked.
+/.continue/MELHORIAS-*.md
