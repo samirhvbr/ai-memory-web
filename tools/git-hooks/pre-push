@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# repodocs:hook — generated from samirhvbr/repodocs and regenerated in place.
+# A copy without this line is the repository's own hook and is never overwritten.
 # pre-push — asks two questions about one line of one file, against the REMOTE.
 #
 # Why here: it is the only hook that sees origin/master. The commit-msg hook
