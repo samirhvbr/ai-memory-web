@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# repodocs:tool — generated from samirhvbr/repodocs and regenerated in place.
+# A copy without this line is the repository's own and is never overwritten.
 # release.sh — every version in version.md gets a git tag named after it and a
 # published GitHub Release.
 #
@@ -87,6 +89,24 @@ if [ -n "$LOCAL_V" ] && [ "$LOCAL_V" != "$CURRENT" ]; then
     "$LOCAL_V" "$CURRENT" "$REF" >&2
 fi
 
+# `origin`, explicitly, and only then gh's own guess. `gh repo view` with no
+# argument resolves the repository from *all* the remotes by its own
+# precedence: in a fork carrying an `upstream` remote it answers the upstream,
+# and this script then tries to publish a Release into somebody else's
+# repository. Measured in `000/hermes-agent` on 07/09/2026 — it asked
+# NousResearch and got a 404. The 404 is luck. Where we hold write access to
+# the second remote, it would have published to the wrong place and nothing
+# would have said so.
+if [ -z "$REPO" ]; then
+  ORIGIN_URL="$(git remote get-url origin 2>/dev/null || true)"
+  if [ -n "$ORIGIN_URL" ]; then
+    CANDIDATE="$(printf '%s' "$ORIGIN_URL" | sed -E 's#^(git@|https://|ssh://git@)##; s#^github\.com[:/]##; s#\.git$##; s#/$##')"
+    case "$CANDIDATE" in
+      */*/*|"") ;;                 # not owner/name — leave it to gh
+      */*) REPO="$CANDIDATE" ;;
+    esac
+  fi
+fi
 if [ -z "$REPO" ]; then
   REPO="$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)"
 fi

@@ -7,6 +7,23 @@ literally the commit subject.**
 Bodies are narrative: what changed, why, and what was measured. This file is
 never rewritten.
 
+## 0.1.3 - the git hooks are regenerated from repodocs
+
+Both hooks of the standard are rewritten from repodocs, and `tools/release.sh`
+with them when it came from there. `commit-msg` checks the shape of the subject
+(`X.Y.Z - description`), refuses a Conventional Commits prefix and a vague
+message, **and checks that the subject's `X.Y.Z` is the version this commit
+carries in `version.md`**. `pre-push` compares the local `version.md` against
+the remote default branch for a repeated or a backwards version — **only when
+the push actually updates that branch**, so a branch deletion, a tag and a topic
+branch pass through.
+
+The hook does **not** check the language and could not: what it measures is the
+shape and the number.
+
+Escape hatch, declared in both: `AIMWEB_NO_HOOK=1`. In a fresh clone, enable them with
+`git config core.hooksPath tools/git-hooks`.
+
 ## 0.1.2 - a seeded index renders every screen in the suite
 
 Until now the only way to know whether a screen rendered was to point the panel
