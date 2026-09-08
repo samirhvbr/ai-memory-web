@@ -212,11 +212,48 @@ Three things about that command line are load-bearing:
   inside it.
 
 A healthy run today is **89 tests, 201 assertions, 1 skipped**. The one skip is
-`AiMemorySchemaCanaryTest`, disarmed on purpose until there is a real index to
-point it at:
+`AiMemorySchemaCanaryTest`, disarmed until there is a real index to point it at.
+Any other skip means the environment is lying to you about being green.
+
+### 9.1 Arming the schema canary — run it as the web user
+
+The canary re-runs every repository read against a real index, which is the only
+thing that catches the hand-written fixture drifting from upstream's schema. It
+has to run **as the user that serves requests**, not as the user that owns the
+checkout:
 
 ```bash
-AI_MEMORY_CANARY_PATH=/opt/ai-memory/data/db/memory.sqlite php artisan test
+sudo -u www-data env AI_MEMORY_CANARY_PATH=/srv/ai-memory/data/db/memory.sqlite HOME=/tmp \
+  php artisan test --filter=AiMemorySchemaCanaryTest
 ```
 
-Any other skip means the environment is lying to you about being green.
+Why `www-data` and not the checkout owner: access to the index is carried by a
+dedicated group (`aimemory-read` on the deploy host, see
+[permissions.md](permissions.md) §3), and the data directory is `0710` — group
+traverse only. `www-data` is in that group because it must read the index to
+render a screen. The checkout owner is **deliberately not**: owning the code is
+not a reason to be able to read every agent memory on the host. Running the
+canary as the owner fails in `is_file()` before it reaches a single query, and
+the failure looks like a missing file rather than a missing group.
+
+Two things about that command are not incidental:
+
+- **`HOME=/tmp`** — `www-data` has no writable home, and PHPUnit wants one.
+- The run prints a `Permission denied` warning for `.phpunit.result.cache`.
+  That is correct: `www-data` cannot write to the application root, and it
+  should not be able to. The warning is not a failure.
+
+It also needs the **dev dependencies**, which a deploy removes
+(`composer install --no-dev`). To arm the canary on a deployed host, reinstall
+them, run it, and put the host back:
+
+```bash
+sudo -u <owner> composer install                       # dev deps back
+sudo -u www-data env AI_MEMORY_CANARY_PATH=... HOME=/tmp php artisan test --filter=AiMemorySchemaCanaryTest
+sudo -u <owner> composer install --no-dev --optimize-autoloader
+```
+
+Measured on the first arming, against ai-memory 2.0.0 (18.4 GiB): **passed in
+27 s**. That is slow because the probe walks a page's full version history, and
+on that index one path has 16,302 versions
+([issue #1](https://github.com/samirhvbr/ai-memory-web/issues/1)).

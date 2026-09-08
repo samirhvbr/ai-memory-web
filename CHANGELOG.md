@@ -7,6 +7,30 @@ literally the commit subject.**
 Bodies are narrative: what changed, why, and what was measured. This file is
 never rewritten.
 
+## 0.1.5 - the schema canary runs as the web user, and the runbook says why
+
+`docs/runbook.md` gains section 9.1. Arming `AiMemorySchemaCanaryTest` against a
+real index has an identity requirement that is not obvious and fails in a
+misleading way: it must run as **`www-data`**, not as the user that owns the
+checkout.
+
+Access to the index is carried by a dedicated group and the data directory is
+`0710` — group traverse only ([permissions.md](docs/permissions.md) §3).
+`www-data` is in that group because it has to read the index to render a screen.
+The checkout owner is deliberately not: owning the code is not a reason to be
+able to read every agent memory on the host. Run the canary as the owner and it
+dies in `is_file()` before reaching a query, reporting a missing file rather
+than a missing group — which is exactly the wrong thing to go looking for.
+
+The section also records the two incidental-looking details that are not
+(`HOME=/tmp`, because `www-data` has no writable home; and the
+`.phpunit.result.cache` permission warning, which is correct and not a failure),
+and that the canary needs dev dependencies a deploy has removed.
+
+Measured on the first arming, against ai-memory 2.0.0 (18.4 GiB): passed in 27 s
+— slow because the probe walks a page's full version history, and on that index
+one path has 16,302 versions (#1).
+
 ## 0.1.4 - a deploy script for the host that already has the index
 
 `tools/deploy_mem.sh` is the deploy for `admin.shvia.org` on the machine
