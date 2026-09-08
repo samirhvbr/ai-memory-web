@@ -7,6 +7,39 @@ literally the commit subject.**
 Bodies are narrative: what changed, why, and what was measured. This file is
 never rewritten.
 
+## 0.1.6 - the deploy script survives a closed front door and an unprivileged owner
+
+Three things the first real deploy found, fixed together because they are the
+same story: the script was written against a host that did not exist yet.
+
+**It could not reload PHP-FPM.** The script runs as the checkout owner and
+refuses to run as root, so the reload is the one thing it cannot do on its own.
+The owner is in `sudo`, but with a password, and a deploy script cannot answer a
+prompt. The fix is one line in `/etc/sudoers.d/b3sys-deploy` granting NOPASSWD
+for exactly `systemctl reload php8.4-fpm` and nothing else — `restart` still
+asks, everything else still asks. It does not widen what that user may do; it
+removes the prompt for one command. Documented in
+[runbook.md](docs/runbook.md) §4.1, with the `visudo -c` check.
+
+**Its smoke test demanded a 200 from a door that is shut on purpose.** The panel
+now runs on a host where `admin.shvia.org` has no DNS record, so certbot cannot
+issue a certificate, so there is no TLS — and a login form over plaintext HTTP
+puts a password on the wire. The :80 vhost therefore answers 403 to everything
+but the ACME path. The script now reads that correctly: while no TLS vhost is
+enabled it accepts **403 as "up and closed on purpose"**, warns loudly on a 200,
+and fails on anything else. The tolerance expires by itself — the moment
+`sites-enabled/<host>-le-ssl.conf` exists, the smoke test moves to https and
+demands a 200, where a 403 would be a genuine failure.
+
+**The first deploy on a host cannot use the script**, because the checkout has
+to already contain it. Named in §4.1 with the two-line sequence, along with the
+consequence that a first run reports the version it moved *from* as though its
+own pull had done the work.
+
+Not fixed here: `composer.lock` is out of date against `composer.json`, which
+the deploy surfaces as a warning on every run. That is a separate commit —
+`composer update --lock`, no version changes, hash only.
+
 ## 0.1.5 - the schema canary runs as the web user, and the runbook says why
 
 `docs/runbook.md` gains section 9.1. Arming `AiMemorySchemaCanaryTest` against a

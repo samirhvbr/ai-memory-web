@@ -10,6 +10,12 @@
 #
 #     sudo -u b3sys tools/deploy_mem.sh
 #
+# It needs exactly one sudo rule to exist, and nothing more — reloading PHP-FPM
+# is its last action and the only thing it cannot do as the checkout owner:
+#
+#     /etc/sudoers.d/b3sys-deploy
+#     b3sys ALL=(root) NOPASSWD: /usr/bin/systemctl reload php8.4-fpm
+#
 # What it deliberately does NOT do, and why:
 #
 #   * It does not run migrations. It REFUSES to continue when a release adds
@@ -76,10 +82,39 @@ php artisan view:cache
 say "Reloading $FPM_SERVICE"
 sudo systemctl reload "$FPM_SERVICE"
 
-say "Smoke test"
-code="$(curl -s -o /dev/null -w '%{http_code}' -H "Host: $SMOKE_HOST" "$SMOKE_URL" || true)"
-[ "$code" = "200" ] || die "$SMOKE_URL answered $code, expected 200. The deploy is live but the login page is not."
-echo "login page: 200"
+# WHICH FRONT DOOR — and why a 403 is currently a pass.
+#
+# The TLS vhost is the real front door. While it does not exist, the :80 vhost
+# is deliberately CLOSED: admin.shvia.org has no DNS record yet, so certbot
+# cannot answer an HTTP-01 challenge, and a login form served over plaintext
+# HTTP would put the operator's password on the wire in the clear. :80 answers
+# 403 to everything except the ACME path, so a 403 here means exactly what we
+# want it to mean: Apache is up, the vhost is loaded, and the door is shut on
+# purpose.
+#
+# That tolerance is TEMPORARY and it expires by itself. The moment the TLS
+# vhost is enabled, this script tests THAT instead and demands a 200 — where a
+# 403 would be a real failure, not a closed door.
+TLS_VHOST="${TLS_VHOST:-/etc/apache2/sites-enabled/${SMOKE_HOST}-le-ssl.conf}"
+
+if [ -e "$TLS_VHOST" ]; then
+    say "Smoke test — https (the TLS vhost is enabled)"
+    code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 \
+        --resolve "${SMOKE_HOST}:443:127.0.0.1" "https://${SMOKE_HOST}/login" || true)"
+    [ "$code" = "200" ] || die "https://${SMOKE_HOST}/login answered $code, expected 200.
+       The deploy is live but the login page is not."
+    echo "login page over TLS: 200"
+else
+    say "Smoke test — http (no TLS vhost yet)"
+    code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 -H "Host: $SMOKE_HOST" "$SMOKE_URL" || true)"
+    case "$code" in
+        403) echo "login page: 403 — :80 is closed on purpose (no DNS, no certificate)."
+             echo "            Reopen it only to measure, and close it again." ;;
+        200) echo "login page: 200 — but this is PLAINTEXT HTTP and the panel has a"
+             echo "            login form. Get the certificate in place." ;;
+        *)   die "$SMOKE_URL answered $code, expected 200 (open) or 403 (closed on purpose)." ;;
+    esac
+fi
 
 # The panel answers 200 with an explanatory notice when the index is unreachable
 # — never a 500 — so a green smoke test does NOT prove it can read the index.

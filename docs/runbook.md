@@ -92,6 +92,44 @@ That is what runs `aimemory:snapshot` daily
 sudo -u www-data php artisan aimemory:snapshot
 ```
 
+### 4.1 `tools/deploy_mem.sh`, and why the first deploy is done by hand
+
+The script runs the sequence above, refuses to migrate silently, refuses to run
+as root, and ends by asking `AiMemoryDatabase::isAvailable()` rather than
+trusting its own smoke test (the panel answers 200 with a notice when the index
+is unreachable, so a 200 proves nothing about the index).
+
+```bash
+sudo -u b3sys tools/deploy_mem.sh
+```
+
+**The first deploy on a host cannot use the script.** The checkout has to be
+pulled up to a revision that *contains* `tools/deploy_mem.sh` before the script
+can be the thing that pulls. So the first deploy is:
+
+```bash
+cd /srv/www/admin.shvia.org/ai-memory-web
+sudo -u b3sys git pull --ff-only     # by hand, once, to acquire the script
+sudo -u b3sys tools/deploy_mem.sh    # every deploy after this one
+```
+
+Obvious in hindsight, invisible in advance — the first run reports the version
+it moved *from* as though the pull had happened, because it had, a minute
+earlier and by a different hand.
+
+**It needs one sudo rule, and only one.** The script reloads PHP-FPM as its last
+action; everything else it does as the checkout owner. Grant exactly that:
+
+```
+# /etc/sudoers.d/b3sys-deploy   (mode 0440, root:root)
+b3sys ALL=(root) NOPASSWD: /usr/bin/systemctl reload php8.4-fpm
+```
+
+Validate with `visudo -c -f /etc/sudoers.d/b3sys-deploy` before trusting it. Note
+this does not widen what the user can do — the deploy user is typically already
+in `sudo` and could reload with a password. It removes the prompt for one
+command, which is what makes the script runnable unattended.
+
 **Exposure.** The panel shows, in plain text, everything the agents remember
 about every project on the host. Put it behind the same boundary you would put a
 staging admin: a private network, a VPN, or at minimum TLS plus IP allow-listing
