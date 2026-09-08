@@ -7,6 +7,50 @@ literally the commit subject.**
 Bodies are narrative: what changed, why, and what was measured. This file is
 never rewritten.
 
+## 0.1.4 - a deploy script for the host that already has the index
+
+`tools/deploy_mem.sh` is the deploy for `admin.shvia.org` on the machine
+ai-memory runs on: pull, production dependencies, cache config/routes/views,
+reload PHP-FPM. There is no build step to run — no Node, no Vite — so that is
+the whole of it.
+
+What it refuses to do is the part worth writing down.
+
+It **does not migrate**. It runs `migrate:status --pending` and stops when a
+release adds a migration, telling the operator to apply it by hand. A deploy
+script that silently migrates a production database is one that eventually
+silently loses one.
+
+It **does not enable the `aimemory:snapshot` schedule**. That cron writes one
+row a day into the panel's own database; pointed at an index it cannot read it
+writes zeros, and a fortnight later those zeros are indistinguishable from
+history.
+
+It **refuses to run as root**, because a deploy that leaves root-owned files in
+the checkout breaks the next one.
+
+And it does not trust its own smoke test. The panel answers 200 with an
+explanatory notice when the index is unreachable — never a 500
+([read-only.md](docs/read-only.md)) — so a login page returning 200 proves the
+app is up and proves nothing about the index. The last step asks
+`AiMemoryDatabase::isAvailable()` directly and prints the path it resolved, or
+the reason it could not.
+
+Measured on the first deploy, against the real ai-memory 2.0.0 index
+(3.071 pages, 345.897 observations, 18,4 GiB): the thirteen screens answer
+between 23 ms and 274 ms. The schema canary from 0.1.2, armed with
+`AI_MEMORY_CANARY_PATH`, passed — every repository read this panel makes was
+answered by the production schema, which is the first evidence that the
+hand-written fixture transcribes it correctly.
+
+Two things that deploy found, and that are not this release's to fix. A page
+whose path has accumulated 16.302 versions renders in 156 s and 9,9 MB of HTML,
+because the page screen lists every version of a path. And the dashboard's
+"live" mode has no configuration flag: it polls `/live` every 15 s from every
+browser that opens it, and the only in-app switch is a per-browser
+`localStorage` toggle. On a WAL database whose sidecar sits at a 191 MiB
+high-water mark, that first deploy denies `/live` at the web server instead.
+
 ## 0.1.3 - the git hooks are regenerated from repodocs
 
 Both hooks of the standard are rewritten from repodocs, and `tools/release.sh`
