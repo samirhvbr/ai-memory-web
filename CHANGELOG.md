@@ -7,6 +7,23 @@ literally the commit subject.**
 Bodies are narrative: what changed, why, and what was measured. This file is
 never rewritten.
 
+## 0.1.7 - the queue says how many tests are gated, counted rather than remembered
+
+Queue item 1 promised that installing the driver would make "the 28 skipped
+tests" run. The real number is **62**, measured on this checkout. Twenty-eight
+was written when the suite was smaller and was never recounted, and a closing
+procedure whose acceptance criterion is a stale number is one somebody can
+satisfy without noticing they did not.
+
+The same item now says out loud what the attempt to close it ran into: the
+driver and the index have to be on the *same* machine. A development box has
+neither, and a host that has one does not necessarily have the other, so the
+step is not "run these three commands somewhere" — it is "run them where the
+index actually is".
+
+The item stays open. Nothing here closes it; it is only worth less time to the
+next reader.
+
 ## 0.1.7 - the schema-probe tests skip instead of erroring where the driver is absent
 
 `AiMemorySchemaProbeTest` called `markTestSkipped()` *before* `parent::setUp()`.

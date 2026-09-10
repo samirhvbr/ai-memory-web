@@ -16,11 +16,13 @@ panel has never rendered a real row in this repository. What *has* been checked:
 routes resolve, every Blade template compiles, the pure logic
 (`DashboardSummary`, `AiMemoryTime`) passes, and Pint is clean.
 
-To close this item, on the ai-memory host:
+To close this item, on the ai-memory host — **both prerequisites have to be on
+the same machine**, which is what makes a development box the wrong place for
+it: the driver, and the index itself:
 
 ```bash
-apt install php8.4-sqlite3          # then restart PHP-FPM
-php artisan test                    # the 28 skipped tests must run and pass
+apt install php8.4-sqlite3          # then restart PHP-FPM; needs root
+php artisan test                    # the 62 skipped tests must run and pass
 php artisan aimemory:snapshot       # must write a snapshot
 ```
 
