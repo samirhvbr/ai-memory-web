@@ -7,6 +7,32 @@ literally the commit subject.**
 Bodies are narrative: what changed, why, and what was measured. This file is
 never rewritten.
 
+## 0.1.7 - the schema-probe tests skip instead of erroring where the driver is absent
+
+`AiMemorySchemaProbeTest` called `markTestSkipped()` *before* `parent::setUp()`.
+PHPUnit still runs `tearDown()` after a skip, and this class's `tearDown()`
+calls `cleanUpAiMemoryIndex()`, whose first statement is `DB::purge('aimemory')`
+— a container lookup. With the application never booted, that resolved to
+`Target class [db] does not exist.` and the three tests reported as **errors**,
+not skips.
+
+The consequence was bigger than three tests. On any machine without
+`pdo_sqlite` — which is every machine this repository has been developed on, and
+the reason queue item 1 exists — `php artisan test` came back
+`"result":"failed"`. A suite that is merely ungated on this host looked broken
+on it, and the one signal that would tell the two apart was the thing being
+swallowed.
+
+The fix is the order its sibling already uses: `AiMemoryDatabaseTest` boots the
+application first and guards second, and skips cleanly because of it. Measured
+on PHP 8.4.24 with no `pdo_sqlite`, whole suite, before and after:
+
+    before   "result":"failed"   tests=92  passed=27  skipped=62  errors=3
+    after    "result":"passed"   tests=89  passed=27  skipped=62  errors=0
+
+Pint stays clean. Nothing about what the tests assert changed — only whether a
+machine that cannot run them says so honestly.
+
 ## 0.1.6 - the deploy script survives a closed front door and an unprivileged owner
 
 Three things the first real deploy found, fixed together because they are the

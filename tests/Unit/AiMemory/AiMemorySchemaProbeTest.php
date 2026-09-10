@@ -24,11 +24,16 @@ class AiMemorySchemaProbeTest extends TestCase
 
     protected function setUp(): void
     {
+        // `parent::setUp()` first, then the guard. Skipping before the
+        // application is booted still runs `tearDown()`, and its
+        // `DB::purge('aimemory')` needs the container: on a machine without
+        // the driver these three reported as errors instead of skips, which
+        // is how a suite that is merely ungated on this host looked red.
+        parent::setUp();
+
         if (! extension_loaded('pdo_sqlite')) {
             $this->markTestSkipped('pdo_sqlite is required to build the ai-memory fixture.');
         }
-
-        parent::setUp();
     }
 
     protected function tearDown(): void
