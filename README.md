@@ -2,10 +2,77 @@
 
 > **Status:** `ACTIVE`
 
+**See what your coding agents remember.**
+
 A **read-only web panel** over the SQLite index of
 [ai-memory](https://github.com/akitaonrails/ai-memory) — the long-term memory of
 coding agents (Claude Code, Codex, and friends). It answers two questions:
 **what did the agents remember**, and **how was it collected**.
+
+[![Dashboard with memory totals and activity history](docs/screenshots/dashboard.png)](docs/screenshots/dashboard.png)
+
+*Memory totals and daily activity at a glance.*
+
+[Getting started](#getting-started) · [Full screenshot gallery](docs/screenshots/README.md)
+
+> These captures show the Portuguese AI-MEMORY integration in the author's site,
+> from which this standalone app was extracted. The standalone app uses English
+> and its own navigation; the surrounding site sidebar is not included.
+
+<details>
+<summary><strong>Explore the interface — history, projects, knowledge and search</strong></summary>
+
+### History and active projects
+
+Follow memory growth over time and compare the most active projects.
+
+![History and active projects — Follow memory growth over time and compare the most active projects.](docs/screenshots/dashboard2.png)
+
+### Projects
+
+Browse projects and compare their pages, sessions and observations.
+
+![Projects — Browse projects and compare their pages, sessions and observations.](docs/screenshots/projects.png)
+
+### Workspaces
+
+See how collected memory is distributed across workspaces.
+
+![Workspaces — See how collected memory is distributed across workspaces.](docs/screenshots/workspaces.png)
+
+### Knowledge pages
+
+Browse consolidated knowledge pages by project and memory tier.
+
+![Knowledge pages — Browse consolidated knowledge pages by project and memory tier.](docs/screenshots/pages.png)
+
+### Agent sessions
+
+Inspect agent activity, duration and the observations collected in each session.
+
+![Agent sessions — Inspect agent activity, duration and the observations collected in each session.](docs/screenshots/sessions.png)
+
+### Observations
+
+Filter individual observations by type, importance, project and period.
+
+![Observations — Filter individual observations by type, importance, project and period.](docs/screenshots/views.png)
+
+### Handoffs
+
+Review context transfers between agents and their current status.
+
+![Handoffs — Review context transfers between agents and their current status.](docs/screenshots/handoffs.png)
+
+### Search
+
+Find remembered knowledge through full-text search with matching excerpts.
+
+![Search — Find remembered knowledge through full-text search with matching excerpts.](docs/screenshots/search.png)
+
+</details>
+
+## How it works
 
 Nine screens over one database it never writes to: a dashboard with live totals
 and a durable history, projects, workspaces, the consolidated wiki pages and

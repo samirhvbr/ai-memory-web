@@ -7,6 +7,14 @@ literally the commit subject.**
 Bodies are narrative: what changed, why, and what was measured. This file is
 never rewritten.
 
+## 0.1.10 - showcase the interface in the repository README
+
+Lead the README with a dashboard capture and an expandable visual tour so
+visitors can see the memory panel before installing it. Turn the screenshot
+directory into a captioned gallery and identify the supplied captures as the
+Portuguese site integration from which the standalone English app was extracted.
+Verify that every embedded image resolves to a tracked file.
+
 ## 0.1.9 - prepare the screenshot directory
 
 Add a tracked screenshot directory with naming and caption guidance so owners
