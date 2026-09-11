@@ -12,6 +12,7 @@ that lists everything stops being read.
 
 | Document | What it answers |
 |---|---|
+| [screenshots/README.md](screenshots/README.md) | Where to contribute interface captures and how to display them in the README. |
 | [what-ai-memory-collects.md](what-ai-memory-collects.md) | **The data.** What ai-memory records — workspaces, projects, sessions, observations, pages, handoffs — table by table, and which screen reads what. Microsecond timestamps, BLOB ids, FTS5. |
 | [read-only.md](read-only.md) | **How it is collected, and the invariant.** Why this app may never write, how `PRAGMA query_only` enforces that, how untrusted agent content is rendered, and the two-layer guard that turns an unreachable index into a notice instead of a 500. |
 | [permissions.md](permissions.md) | **The operational page.** Why read permission on `memory.sqlite` is not enough, the shared-group recipe, and how to diagnose it from the web user's point of view. |

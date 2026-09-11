@@ -7,6 +7,12 @@ literally the commit subject.**
 Bodies are narrative: what changed, why, and what was measured. This file is
 never rewritten.
 
+## 0.1.9 - prepare the screenshot directory
+
+Add a tracked screenshot directory with naming and caption guidance so owners
+can pull the repository and contribute interface captures. Link the directory
+from the documentation index without embedding images that do not exist yet.
+
 ## 0.1.8 - the panel is verified against the real index, and queue item 1 closes
 
 The app was extracted, built and tested on a machine with no `pdo_sqlite`, so
