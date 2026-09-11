@@ -8,28 +8,7 @@
 
 ## What is left
 
-### 1. Run it against a real `memory.sqlite` — **not yet done**
-
-The app was extracted, built and tested on a machine whose PHP has **no
-`pdo_sqlite`**, so every test that needs the driver **skips** there and the
-panel has never rendered a real row in this repository. What *has* been checked:
-routes resolve, every Blade template compiles, the pure logic
-(`DashboardSummary`, `AiMemoryTime`) passes, and Pint is clean.
-
-To close this item, on the ai-memory host — **both prerequisites have to be on
-the same machine**, which is what makes a development box the wrong place for
-it: the driver, and the index itself:
-
-```bash
-apt install php8.4-sqlite3          # then restart PHP-FPM; needs root
-php artisan test                    # the 62 skipped tests must run and pass
-php artisan aimemory:snapshot       # must write a snapshot
-```
-
-Then open each of the nine screens once. Until that has happened, treat the
-first deploy as the real test.
-
-### 2. Whether samirhv-site keeps its module — **owner's call**
+### 1. Whether samirhv-site keeps its module — **owner's call**
 
 [ADR-005](../docs/decisions.md#adr-005) accepted a fork: the same code now
 exists in `samirhvbr/samirhv-site` and here, and the two will drift. The panel

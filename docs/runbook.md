@@ -253,6 +253,14 @@ A healthy run today is **89 tests, 201 assertions, 1 skipped**. The one skip is
 `AiMemorySchemaCanaryTest`, disarmed until there is a real index to point it at.
 Any other skip means the environment is lying to you about being green.
 
+With the canary armed as well (§9.1) the honest number is **89 passed, 0
+skipped** — measured on `blue3site` on 11/09/2026. Note what that means for the
+recipe: `php artisan test` alone leaves the canary disarmed, because
+`phpunit.xml` deliberately blanks `AI_MEMORY_SQLITE_PATH` so no test can read a
+real index by accident. Arming is a separate variable, and running the suite
+without it still reports green while the one test that checks upstream's real
+schema has not run.
+
 ### 9.1 Arming the schema canary — run it as the web user
 
 The canary re-runs every repository read against a real index, which is the only
@@ -292,6 +300,8 @@ sudo -u <owner> composer install --no-dev --optimize-autoloader
 ```
 
 Measured on the first arming, against ai-memory 2.0.0 (18.4 GiB): **passed in
-27 s**. That is slow because the probe walks a page's full version history, and
+27 s**. Measured again on 11/09/2026 against the same install grown to
+**39.5 GiB: 70.4 s**. The cost tracks the index, for the reason below — watch
+the trend rather than the number. That is slow because the probe walks a page's full version history, and
 on that index one path has 16,302 versions
 ([issue #1](https://github.com/samirhvbr/ai-memory-web/issues/1)).

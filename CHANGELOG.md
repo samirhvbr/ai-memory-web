@@ -7,6 +7,43 @@ literally the commit subject.**
 Bodies are narrative: what changed, why, and what was measured. This file is
 never rewritten.
 
+## 0.1.8 - the panel is verified against the real index, and queue item 1 closes
+
+The app was extracted, built and tested on a machine with no `pdo_sqlite`, so
+until now 62 of its 89 tests had never executed and no screen had rendered a
+real row. Both happened, on the host that has the index — `blue3site`, PHP
+8.4.24 with the driver already present, reading
+`/opt/ai-memory/data/db/memory.sqlite` (a symlink to `/srv/…`, the same file the
+runbook names).
+
+**The suite.** With the driver, 61 of the 62 gated tests run and pass; the 62nd
+is the canary, which arms separately. Armed, the whole suite is **89 passed, 0
+skipped** — against 27 passed / 62 skipped on a driverless box. Nothing failed,
+which is the part worth stating plainly: the hand-written fixture in
+`SeedsAiMemoryIndex` still matches what upstream actually ships.
+
+**The canary, second arming.** 70.4 s against a 39.5 GiB index. The first arming
+recorded in the runbook was 27 s against 18.4 GiB — the index has roughly
+doubled and the probe's cost went with it. It is the same walk of a page's full
+version history, so this is the number to watch, not a regression.
+
+**Every screen, once.** All fifteen routes answered 200 — `/login` 302s to the
+dashboard when already authenticated — and **not one rendered the degradation
+notice**. The dashboard came back in 267 ms with 30 rows; `/projects` 116 ms and
+**116 rows**; `/observations` 285 ms; `/pages`, `/sessions` and `/handoffs` 50
+rows each; `/workspaces` 3. `/live` answered `available: true` with real counts.
+`aimemory:snapshot` wrote **3,170 pages · 2,658 sessions · 371,670
+observations**.
+
+Two things that looked like findings and were not, recorded so nobody re-opens
+them: a two-word search returning nothing is correct — `purge` has zero hits in
+`pages_fts`, so `purge session` cannot have any; and the `30,000` on the
+dashboard is rendered data, not a clipped axis — `niceMax(91556)` is 95,000, and
+the JS twin is present, as an arrow function at `dashboard.js:45`.
+
+The queue item leaves `.continue/`. What replaced it there is nothing: it is
+done.
+
 ## 0.1.7 - the queue says how many tests are gated, counted rather than remembered
 
 Queue item 1 promised that installing the driver would make "the 28 skipped
