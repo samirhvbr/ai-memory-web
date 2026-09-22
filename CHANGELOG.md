@@ -7,6 +7,31 @@ literally the commit subject.**
 Bodies are narrative: what changed, why, and what was measured. This file is
 never rewritten.
 
+## 0.1.15 - refresh the lock hash, and make CI say what it is warning about
+
+The first **green** CI run still carried two things worth reading, and neither would have
+been visible before this week because nothing ran.
+
+### `composer.lock` was out of step with `composer.json`
+
+`composer validate` says so plainly; `composer install` says it as a warning that scrolls
+past. Refreshed with `composer update --lock`, which touches the hash and nothing else —
+verified by diffing every package name and version before and after: **the only line that
+changed was `content-hash`.** No dependency moved.
+
+CI now runs `composer validate --no-check-publish` before installing, so the next drift
+fails instead of scrolling.
+
+### "102 warnings" with no text
+
+The run reported one warning per test and printed not a single word about what they were.
+A count with no cause is not a signal — it is a thing people learn to scroll past. The
+test step now passes `--display-warnings`, so the next run says it out loud.
+
+🔬 **Not diagnosed here, deliberately.** The warnings are invisible from this machine:
+`ext-pdo_sqlite` is missing, so 66 of the 102 tests skip and whatever warns never runs.
+Guessing from here would be inventing a cause; the next run prints it.
+
 ## 0.1.14 - create the test operator once per test
 
 Second CI run: **51 failures down to 1**, and the last one was still the new test.

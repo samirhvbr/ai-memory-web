@@ -44,6 +44,12 @@ jobs:
           extensions: pdo, pdo_sqlite, mbstring, dom, fileinfo
           coverage: none
 
+      # A lock file out of step with composer.json means `composer install` is resolving
+      # something other than what the manifest asks for, and it says so as a WARNING that
+      # scrolls past. Measured on this workflow's first green run: it was already stale.
+      - name: Manifest and lock agree
+        run: composer validate --no-check-publish
+
       - name: Install dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
 
@@ -60,8 +66,11 @@ jobs:
       - name: Style
         run: ./vendor/bin/pint --test
 
+      # `--display-warnings` because the first green run reported "102 warnings" — one
+      # per test — with no text anywhere in the log saying what they were. A count with
+      # no cause is not a signal, it is a thing people learn to scroll past.
       - name: Tests
-        run: php artisan test --log-junit junit.xml
+        run: php artisan test --display-warnings --log-junit junit.xml
 
       # A SKIP IS NOT A PASS. The suite that motivated this file reported "36 passed"
       # while skipping 62 of its 98 tests, and nothing in that line said so.
