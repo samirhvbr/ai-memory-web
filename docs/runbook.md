@@ -103,6 +103,31 @@ is unreachable, so a 200 proves nothing about the index).
 sudo -u b3sys tools/deploy_mem.sh
 ```
 
+#### 🔴 It refuses to finish on a login page served over plaintext HTTP
+
+Since `0.1.11`, a smoke test that answers **200 over `:80`** fails the deploy. It used to
+print a warning and carry on — and because a fall-through is still exit 0 under
+`set -euo pipefail`, the script reported `Done.` right after publishing a login form in
+the clear. On a host whose `:80` vhost serves the app, which is the Apache default almost
+everywhere, that 200 is the **ordinary** outcome, not an edge case.
+
+The `403` tolerance is unchanged: while `admin.shvia.org` has no DNS record, certbot
+cannot answer an HTTP-01 challenge, so `:80` is shut on purpose and a 403 is the door
+being closed, not a failure.
+
+If you know the host is unreachable from the network and want to deploy anyway, say so
+out loud instead of editing the script:
+
+```bash
+sudo -u b3sys AIMWEB_ALLOW_PLAINTEXT=1 tools/deploy_mem.sh
+```
+
+⚠️ **That is a deliberate exception, not a passing test.** The operator's password is this
+panel's entire perimeter — it renders, in plain text, everything the agents remember about
+every project on the host. Ruler:
+`tests/Feature/DeployRefusesPlaintextLoginTest.php`, which runs `smoke_verdict` with the
+real shell and reads the real exit code.
+
 **The first deploy on a host cannot use the script.** The checkout has to be
 pulled up to a revision that *contains* `tools/deploy_mem.sh` before the script
 can be the thing that pulls. So the first deploy is:

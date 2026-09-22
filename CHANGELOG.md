@@ -7,6 +7,60 @@ literally the commit subject.**
 Bodies are narrative: what changed, why, and what was measured. This file is
 never rewritten.
 
+## 0.1.11 - fail the deploy when the login page is served over plaintext HTTP
+
+`f196`. `tools/deploy_mem.sh` smoke-tests the login page after reloading PHP-FPM. With no
+TLS vhost it asks `:80`, and the `200` branch printed a warning and **fell through**:
+
+```
+200) echo "login page: 200 — but this is PLAINTEXT HTTP and the panel has a"
+     echo "            login form. Get the certificate in place." ;;
+```
+
+Only `*)` called `die`. Under `set -euo pipefail` a fall-through is still exit 0, so the
+script printed `Done.` — a successful deploy — immediately after publishing a login form
+in the clear.
+
+⚠️ **That is the ordinary outcome, not an edge case.** On a host whose `:80` vhost serves
+the app — the Apache default almost everywhere — 200 is exactly what the probe gets. The
+403 the surrounding comment describes depends on `:80` being deliberately shut, which is
+true of one host today. The operator's password is this panel's entire perimeter: it
+renders, in plain text, everything the agents remember about every project on the host.
+
+### What changed
+
+`200` now fails the deploy. The refusal names its own escape hatch, because a refusal that
+does not say how to proceed gets worked around by commenting the check out:
+
+```bash
+sudo -u b3sys AIMWEB_ALLOW_PLAINTEXT=1 tools/deploy_mem.sh
+```
+
+The `403` tolerance is untouched, and every other code still fails — including `000`,
+which is what curl reports when it could not connect at all.
+
+### The verdict is a function so that it can be RUN
+
+`smoke_verdict` was extracted from the `case` and the script gained an `AIMWEB_SOURCE_ONLY=1`
+early return, so `tests/Feature/DeployRefusesPlaintextLoginTest.php` sources the real file
+and calls the real function with the real shell, reading the real exit code. A ruler that
+grepped for `die` would pass on the word appearing in a comment and fail on a rename; this
+one measures the only thing the deploy depends on.
+
+| reversal | what went red |
+|---|---|
+| `200` goes back to a warning that passes | `plaintext_200_FAILS_the_deploy`, `the_refusal_names_its_own_escape_hatch` |
+| any other code passes | `anything_else_still_fails`, all five data sets |
+| the escape hatch is inverted | `plaintext_200_FAILS_the_deploy`, `the_escape_hatch_lets_a_deliberate_operator_through` |
+
+### 🔴 Measured while verifying this, and NOT fixed here
+
+`php artisan test` on this machine reports **36 passed of 98 — and 62 skipped**, because
+`pdo_sqlite` is not installed. This repository has **no CI workflow that runs the suite**
+(`.github/workflows/` holds only `release.yml`, which publishes Releases). So those 62
+tests do not run here and do not run anywhere. The nine tests added by this delivery are
+among the ones that do run: they shell out and need no database.
+
 ## 0.1.10 - showcase the interface in the repository README
 
 Lead the README with a dashboard capture and an expandable visual tour so

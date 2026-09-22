@@ -40,6 +40,42 @@ cd "$APP_DIR"
 say() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 die() { printf '\n\033[31mFAILED: %s\033[0m\n' "$*" >&2; exit 1; }
 
+# The verdict on the :80 smoke test, kept as a function so it can be EXERCISED
+# without running a deploy — tests/Feature/DeployRefusesPlaintextLoginTest.php
+# calls it directly. A guard nobody can run is a comment with better formatting.
+#
+# 🔴 200 is a FAILURE here, and that reversal is the whole reason this function
+# exists. Until 2026-09-22 the 200 branch printed a warning and fell through.
+# With `set -euo pipefail` that is still exit 0: a deploy that had just
+# published a login form in cleartext reported "Done." On a machine whose :80
+# vhost serves the app — the Apache default almost everywhere — that is the
+# ORDINARY outcome, not an edge case. The operator's password is the entire
+# perimeter of this panel, so shipping it in the clear is not a warning.
+smoke_verdict() {
+    case "$1" in
+        403) echo "login page: 403 — :80 is closed on purpose (no DNS, no certificate)."
+             echo "            Reopen it only to measure, and close it again."
+             return 0 ;;
+        200) if [ "${AIMWEB_ALLOW_PLAINTEXT:-0}" = "1" ]; then
+                 echo "login page: 200 over PLAINTEXT HTTP — allowed by AIMWEB_ALLOW_PLAINTEXT=1."
+                 echo "            The operator's password travels in the clear. This is a"
+                 echo "            deliberate exception, not a passing test."
+                 return 0
+             fi
+             die "the login page answered 200 over PLAINTEXT HTTP.
+       This panel has a login form, so the deploy would put the operator's
+       password on the wire in the clear. Get the certificate in place — or,
+       if you know this host is unreachable from the network, re-run with
+       AIMWEB_ALLOW_PLAINTEXT=1 to say so out loud." ;;
+        *)   die "$SMOKE_URL answered $1, expected 403 (closed on purpose)." ;;
+    esac
+}
+
+# Sourced by the ruler to reach the functions above without running a deploy.
+if [ "${AIMWEB_SOURCE_ONLY:-0}" = "1" ]; then
+    return 0
+fi
+
 [ -f artisan ] || die "no artisan in $APP_DIR — is this the application root?"
 [ -f .env ]    || die "no .env in $APP_DIR — this is a deploy, not a first install"
 
@@ -107,13 +143,7 @@ if [ -e "$TLS_VHOST" ]; then
 else
     say "Smoke test — http (no TLS vhost yet)"
     code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 -H "Host: $SMOKE_HOST" "$SMOKE_URL" || true)"
-    case "$code" in
-        403) echo "login page: 403 — :80 is closed on purpose (no DNS, no certificate)."
-             echo "            Reopen it only to measure, and close it again." ;;
-        200) echo "login page: 200 — but this is PLAINTEXT HTTP and the panel has a"
-             echo "            login form. Get the certificate in place." ;;
-        *)   die "$SMOKE_URL answered $code, expected 200 (open) or 403 (closed on purpose)." ;;
-    esac
+    smoke_verdict "$code"
 fi
 
 # The panel answers 200 with an explanatory notice when the index is unreachable
