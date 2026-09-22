@@ -47,6 +47,16 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
 
+      # The suite needs an APP_KEY and there is no .env in a clean checkout: without
+      # one, every test that boots the encrypter dies with MissingAppKeyException, and
+      # the error does not mention the .env. Measured on this workflow's first run: 47
+      # of 51 failures were this, and none of them were about the app.
+      #
+      # Generated per run rather than committed: a key-shaped literal in the repository
+      # is the kind of thing that gets copied somewhere it matters.
+      - name: Application key
+        run: echo "APP_KEY=base64:$(php -r 'echo base64_encode(random_bytes(32));')" >> "$GITHUB_ENV"
+
       - name: Style
         run: ./vendor/bin/pint --test
 

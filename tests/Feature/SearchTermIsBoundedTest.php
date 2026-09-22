@@ -50,7 +50,13 @@ class SearchTermIsBoundedTest extends TestCase
 
     private function operador(): User
     {
-        return User::factory()->create();
+        // `User::create`, not `User::factory()` — this repository has no
+        // `database/factories`, and the sibling suites build the operator the same way.
+        return User::create([
+            'name' => 'Operator',
+            'email' => 'operator@example.test',
+            'password' => 'a-very-long-password',
+        ]);
     }
 
     #[Test]

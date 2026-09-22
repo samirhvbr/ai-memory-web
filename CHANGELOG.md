@@ -7,6 +7,31 @@ literally the commit subject.**
 Bodies are narrative: what changed, why, and what was measured. This file is
 never rewritten.
 
+## 0.1.13 - give CI an APP_KEY, and build the test operator the way this repo does
+
+The first CI run came back **51 failed**, and both causes were the environment rather
+than the app — which is the whole reason the previous entry said that run would be
+reporting something already true and unmeasured.
+
+| failures | cause |
+|---|---|
+| **47** | `MissingAppKeyException` — a clean checkout has no `.env`, so nothing set `APP_KEY` and every test that boots the encrypter died |
+| **4** | `Call to undefined method App\Models\User::factory()` — this repository has **no** `database/factories`; the sibling suites build the operator with `User::create([...])` and the test added in `0.1.12` did not |
+
+⚠️ **The `APP_KEY` failure is the more interesting one, because the error does not name
+its own cause.** It says "No application encryption key has been specified" and points at
+`EncryptionServiceProvider`; nothing in it says *"there is no `.env` here"*. Locally the
+suite passed because the developer's `.env` supplied the key — so this is a defect that
+only exists in a clean checkout, and until this week there was no clean checkout to find
+it in.
+
+The key is generated per run instead of committed to `phpunit.xml`: a key-shaped literal
+in a repository is the kind of thing that gets copied somewhere it matters.
+
+🔬 **Still true and not fixed here:** a fresh clone with no `.env` cannot run
+`php artisan test` locally either, for exactly the same reason. CI now supplies the key;
+the clone does not. That is a separate delivery.
+
 ## 0.1.12 - run the suite in CI, and refuse a skip nobody declared
 
 `f197`. Two halves of the same defect: a divergence between this app and its twin, and a
