@@ -1,0 +1,93 @@
+# Run the suite on every push and pull request.
+#
+# ## Why this file exists (measured 2026-09-22, `f197`)
+#
+# It did not. `.github/workflows/` held only `release.yml`, which publishes a Release when
+# `version.md` moves and never runs a test. So the suite ran only where somebody happened
+# to type `php artisan test` — and on the machine where that was measured, **62 of 98
+# tests were skipped**, because `ext-pdo_sqlite` (a declared requirement in
+# `composer.json`) is not installed there.
+#
+# Sixty-two tests that skip locally and run nowhere else are not coverage; they are a
+# green tick over an untested third of the app. This job installs the extension, so they
+# run.
+#
+# ⚠️ The suite is DELIBERATELY configured against an unreachable index: `phpunit.xml` sets
+# `AI_MEMORY_SQLITE_PATH` to the empty string, and the panel's contract (docs/read-only.md
+# §4) is that every screen answers 200 with a notice in that state. Do not "fix" that by
+# pointing CI at a real index — the notice path is what is being tested.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      # Pinned by SHA, not by tag: a moving tag is a dependency somebody else can
+      # rewrite after review. The comment carries the human-readable version.
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.4'
+          extensions: pdo, pdo_sqlite, mbstring, dom, fileinfo
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Style
+        run: ./vendor/bin/pint --test
+
+      - name: Tests
+        run: php artisan test --log-junit junit.xml
+
+      # A SKIP IS NOT A PASS. The suite that motivated this file reported "36 passed"
+      # while skipping 62 of its 98 tests, and nothing in that line said so.
+      #
+      # This reads the junit of the run above — it does NOT run the suite a second
+      # time, which would both double the job and risk measuring a different run.
+      # It exits 2 when it cannot read the file, because "did not measure" must never
+      # be readable as "clean".
+      - name: Refuse a suite that skipped
+        if: always()
+        run: |
+          php -r '
+            $f = "junit.xml";
+            if (! is_file($f)) { fwrite(STDERR, "no junit.xml — did not measure\n"); exit(2); }
+            $x = @simplexml_load_file($f);
+            if ($x === false) { fwrite(STDERR, "junit.xml unreadable — did not measure\n"); exit(2); }
+            $total = count($x->xpath("//testcase"));
+            $skipped = count($x->xpath("//skipped"));
+            if ($total === 0) { fwrite(STDERR, "junit.xml has no testcase — did not measure\n"); exit(2); }
+            printf("%d testcase(s), %d skipped\n", $total, $skipped);
+            // An ALLOWLIST, not a count: a count lets a deliberate skip be traded for
+            // an accidental one without the number moving.
+            $lista = "tests/expected-skips.txt";
+            if (! is_file($lista)) { fwrite(STDERR, "no $lista — did not measure\n"); exit(2); }
+            $permitidos = array_filter(array_map("trim", file($lista)), fn ($l) => $l !== "" && $l[0] !== "#");
+
+            $inesperados = [];
+            foreach ($x->xpath("//testcase[skipped]") as $t) {
+              $nome = (string) $t["class"] . "::" . (string) $t["name"];
+              if (! in_array($nome, $permitidos, true)) { $inesperados[] = $nome; }
+            }
+
+            if ($inesperados !== []) {
+              foreach ($inesperados as $n) { printf("::error::unexpected skip: %s\n", $n); }
+              fwrite(STDERR, count($inesperados) . " unexpected skip(s) — a skipped suite is not a green suite.\n");
+              fwrite(STDERR, "If the skip is correct, say so in $lista and explain why.\n");
+              exit(1);
+            }
+          '

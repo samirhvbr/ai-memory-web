@@ -63,7 +63,7 @@ class DeployRefusesPlaintextLoginTest extends TestCase
     }
 
     #[Test]
-    public function plaintext_200_FAILS_the_deploy(): void
+    public function plaintext_200_fails_the_deploy(): void
     {
         // 🔴 The case itself. Before 2026-09-22 this exited 0 with a warning.
         $r = $this->verdict('200');

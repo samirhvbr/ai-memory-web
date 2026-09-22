@@ -7,6 +7,79 @@ literally the commit subject.**
 Bodies are narrative: what changed, why, and what was measured. This file is
 never rewritten.
 
+## 0.1.12 - run the suite in CI, and refuse a skip nobody declared
+
+`f197`. Two halves of the same defect: a divergence between this app and its twin, and a
+suite that was not measuring most of itself.
+
+### The fork, measured
+
+`f197` claimed *39 shared files, 37 divergent, 2 byte-identical* between this repository
+and `samirhv-site`. **That count does not reproduce**, and the paths it named
+(`app/Http/Controllers/Admin`, `resources/views/admin/ai-memory`) do not exist here — this
+app flattened them. Measured by sha256 against the real counterparts:
+
+| here | in samirhv-site | shared | byte-identical |
+|---|---|---|---|
+| `app/Services/AiMemory` | `app/Services/AiMemory` | 11 | **0** |
+| `resources/views/ai-memory` | `resources/views/admin/ai-memory` | 16 | **0** |
+| `AiMemoryController` (274 lines) | `Admin/AiMemoryController` (279 lines) | 1 | 0 |
+
+So: **28 file pairs, none identical** — the duplication is real and the divergence is
+total, but the finding's numbers were not. Saying which part reproduced is the point; a
+finding list that rounds its own evidence up stops being worth reading.
+
+### The functional divergence, which did reproduce
+
+`samirhv-site` validates the search term (`'q' => ['nullable', 'string', 'max:200']`) and
+this app did not — while its three other filtered actions (`pages`, `sessions`,
+`handoffs`) all do. Ported here, so the four answer the same way.
+
+🔬 **Honest severity: consistency, not a vulnerability.** `SearchRepository::toMatch()`
+already caps the token COUNT at 10, so a long query never became a long `MATCH` expression
+— unless it is one long token. Measured: 2 MB of input costs **2.52 ms** in the tokenising
+regex and yields a 2 MB term. Small. The value is that nobody has to remember which of the
+four actions is the exception.
+
+### 🔴 The larger half: this repository had no CI
+
+`.github/workflows/` held only `release.yml`, which publishes a Release when `version.md`
+moves and never runs a test. So `php artisan test` ran only where somebody typed it — and
+on the machine where that was measured it reported **"36 passed"** while skipping **62 of
+98**, because `ext-pdo_sqlite` (a *declared* requirement in `composer.json`;
+`composer check-platform-reqs` says `missing`) is not installed there.
+
+Sixty-two tests that skip locally and run nowhere else are not coverage. `ci.yml` now
+installs the extension and runs `pint --test` plus the suite on every push and pull
+request, with both actions pinned by SHA.
+
+### A skip is not a pass
+
+The last CI step reads the junit of the run above — it does not re-run the suite — and
+fails on any skip **not named in `tests/expected-skips.txt`**. An allowlist, not a count:
+a count lets a deliberate skip be traded for an accidental one without the number moving.
+It exits **2** when it cannot read the junit, because *"did not measure"* must never be
+readable as *"clean"*.
+
+One entry today: the schema canary, which needs a real ai-memory index and is armed by
+hand with `AI_MEMORY_CANARY_PATH`. The root-only skip in `AiMemoryDatabaseTest` is
+deliberately **not** listed — GitHub's runner is not root, so if CI ever moves into a root
+container the guard should complain rather than quietly stop measuring eight tests.
+
+Rehearsed locally against the real junit of a 66-skip run: the canary is recognised, the
+other 65 are named, exit 1; with the file absent, exit 2.
+
+⚠️ **This is the first CI run this repository has ever had.** If it comes back red, that
+is the guard reporting something that was already true and unmeasured, not a regression
+introduced here.
+
+### Correction to `0.1.11`
+
+That entry names the reversal target `plaintext_200_FAILS_the_deploy`. The method is
+`plaintext_200_fails_the_deploy` — `pint`'s `php_unit_method_casing` renamed it, and this
+delivery is what ran `pint` over that file for the first time. The changelog is never
+rewritten, so the correction lives here.
+
 ## 0.1.11 - fail the deploy when the login page is served over plaintext HTTP
 
 `f196`. `tools/deploy_mem.sh` smoke-tests the login page after reloading PHP-FPM. With no

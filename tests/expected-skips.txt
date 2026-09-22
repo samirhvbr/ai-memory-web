@@ -1,0 +1,30 @@
+# Tests that are ALLOWED to skip, one `Class::method` per line.
+#
+# The CI step "Refuse a suite that skipped" fails on any skip that is not listed here.
+# A bare count would not do: it lets a deliberate skip be silently traded for an
+# accidental one, which is exactly the failure this guard exists to catch.
+#
+# ## Why the guard exists (measured 2026-09-22)
+#
+# `php artisan test` reported "36 passed" on a machine where **62 of 98 tests skipped**,
+# because `ext-pdo_sqlite` — a declared requirement in `composer.json` — was not
+# installed. The line said passed. Two thirds of the app was not measured.
+#
+# ## Adding a line here is a decision, not a formality
+#
+# It says: this test cannot run in CI, and that is correct rather than merely convenient.
+# If you are adding a line because the environment is missing something CI could install,
+# install it in the workflow instead.
+
+# The canary needs a REAL ai-memory index to read, which CI has none of and should not
+# have — pointing it at a fixture would defeat the whole point of a canary. It is armed
+# by hand with AI_MEMORY_CANARY_PATH. See tests/Feature/AiMemorySchemaCanaryTest.php.
+Tests\Feature\AiMemorySchemaCanaryTest::test_a_real_index_still_answers_every_query_this_panel_makes
+
+# NOT listed on purpose: `AiMemoryDatabaseTest` skips its whole class when running as
+# root, because permission bits are not enforced there. GitHub's runner is not root, so
+# the guard stays armed for that case — if someone moves CI into a root container, it
+# should complain rather than quietly stop measuring eight tests.
+#
+# A guard that errs toward the alarm costs one check. A guard that errs toward silence
+# costs the day.

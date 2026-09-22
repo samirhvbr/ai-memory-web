@@ -31,3 +31,6 @@ Thumbs.db
 # documents included. A MELHORIAS-*.md has landed in .continue/ twice already;
 # the queue itself (.continue/README.md) stays tracked.
 /.continue/MELHORIAS-*.md
+
+# Written by `php artisan test --log-junit` in CI.
+junit.xml

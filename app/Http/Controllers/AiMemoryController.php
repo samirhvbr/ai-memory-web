@@ -213,7 +213,20 @@ class AiMemoryController extends Controller
 
     public function search(Request $request, SearchRepository $search): View
     {
-        $q = trim($request->string('q')->toString());
+        // The three other filtered actions on this controller validate their input;
+        // this one did not, and the twin panel in samirhv-site does (`f197`). What is
+        // bounded here is the TERM'S LENGTH: `SearchRepository::toMatch` already caps
+        // the token COUNT at 10, so a long query never became a long MATCH expression
+        // — unless it is one long token, which becomes one long quoted prefix term.
+        //
+        // 🔬 Measured 2026-09-22, and the number is the reason this is a consistency
+        // fix rather than a security one: 2 MB of input costs 2.5 ms in the tokenising
+        // regex and produces a 2 MB MATCH term. Small. The value is that the four
+        // actions now answer the same way, so nobody has to remember which one is the
+        // exception.
+        $q = trim($request->validate([
+            'q' => ['nullable', 'string', 'max:200'],
+        ])['q'] ?? '');
 
         return $this->screen('ai-memory.search', fn () => [
             'q' => $q,
