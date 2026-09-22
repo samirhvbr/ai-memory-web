@@ -60,6 +60,17 @@ jobs:
       #
       # Generated per run rather than committed: a key-shaped literal in the repository
       # is the kind of thing that gets copied somewhere it matters.
+      # phpdotenv warns once per test when there is no .env — 102 warnings on the first
+      # green run, all of them this. An EMPTY file is the whole fix: Laravel loads the
+      # environment immutably, so a real environment variable still wins, and phpdotenv
+      # stops complaining about a file it cannot open.
+      #
+      # ⚠️ Empty on purpose. Copying .env.example here would make CI depend on a file
+      # whose contents nobody reviews on this path, and the suite's configuration lives
+      # in phpunit.xml, which is the reviewed one.
+      - name: An empty .env, so phpdotenv stops warning
+        run: touch .env
+
       - name: Application key
         run: echo "APP_KEY=base64:$(php -r 'echo base64_encode(random_bytes(32));')" >> "$GITHUB_ENV"
 

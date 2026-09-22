@@ -7,6 +7,32 @@ literally the commit subject.**
 Bodies are narrative: what changed, why, and what was measured. This file is
 never rewritten.
 
+## 0.1.16 - name the 102 warnings, and silence them with an empty .env
+
+`0.1.15` made CI print what it was warning about. It printed one thing, 102 times:
+
+```
+file_get_contents(/home/runner/work/ai-memory-web/ai-memory-web/.env):
+Failed to open stream: No such file or directory
+  at vendor/vlucas/phpdotenv/src/Store/File/Reader.php:73
+```
+
+Same root as the 47 `MissingAppKeyException` failures two entries ago, wearing different
+clothes: **a clean checkout has no `.env`**, and every test that boots the framework asked
+for one. The failures were loud and got fixed; the warnings were a number with no text and
+would have been scrolled past forever.
+
+`touch .env` is the whole fix. Laravel loads the environment immutably, so the `APP_KEY`
+exported into the job still wins, and phpdotenv stops complaining about a file it cannot
+open. **Empty on purpose** — copying `.env.example` would make CI depend on a file nobody
+reviews on this path, while the suite's configuration lives in `phpunit.xml`, which is
+reviewed.
+
+> The pattern across `0.1.12`–`0.1.16` is one defect seen four times: this repository had
+> never been run anywhere but on a machine that already had a `.env` and, until the last
+> of them, `ext-pdo_sqlite`. Nothing here was a regression. Every one of them was true
+> before CI existed and invisible because nothing looked.
+
 ## 0.1.15 - refresh the lock hash, and make CI say what it is warning about
 
 The first **green** CI run still carried two things worth reading, and neither would have
