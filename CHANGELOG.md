@@ -7,6 +7,15 @@ literally the commit subject.**
 Bodies are narrative: what changed, why, and what was measured. This file is
 never rewritten.
 
+## 0.1.14 - create the test operator once per test
+
+Second CI run: **51 failures down to 1**, and the last one was still the new test.
+`an_empty_search_still_renders` called `operador()` twice in the same test — the helper
+inserts a row with a fixed e-mail, so the second call hit the unique index on
+`users.email` with a `UniqueConstraintViolationException`.
+
+One operator, two requests. No production code involved.
+
 ## 0.1.13 - give CI an APP_KEY, and build the test operator the way this repo does
 
 The first CI run came back **51 failed**, and both causes were the environment rather

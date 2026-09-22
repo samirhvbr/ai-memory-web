@@ -82,8 +82,12 @@ class SearchTermIsBoundedTest extends TestCase
     {
         // `nullable` matters: the screen is reachable with no term at all, and that is
         // the normal way in — a bound that broke the empty case would be worse than none.
-        $this->actingAs($this->operador())->get('/search')->assertOk()->assertSessionHasNoErrors();
-        $this->actingAs($this->operador())->get('/search?q=')->assertOk()->assertSessionHasNoErrors();
+        // One operator, two requests: `operador()` inserts a row with a fixed e-mail,
+        // so calling it twice in one test violates the unique index on `users.email`.
+        $u = $this->operador();
+
+        $this->actingAs($u)->get('/search')->assertOk()->assertSessionHasNoErrors();
+        $this->actingAs($u)->get('/search?q=')->assertOk()->assertSessionHasNoErrors();
     }
 
     #[Test]
