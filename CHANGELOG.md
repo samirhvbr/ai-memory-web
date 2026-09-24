@@ -7,6 +7,27 @@ literally the commit subject.**
 Bodies are narrative: what changed, why, and what was measured. This file is
 never rewritten.
 
+## 0.1.19 - the reader classes become the source of samirhv-site's copy (ADR-006)
+
+ADR-005 accepted a fork and expected the two copies to drift. They had: 217 lines apart
+across the eleven classes. On 24/09/2026 the owner chose a **synced copy, plus a check
+that fails when the two differ**, over a Composer package and over leaving them apart.
+ADR-006 records it, and ADR-005's status now names what it superseded.
+
+The check that fails on divergence lives in samirhv-site, the consumer. What lives here is
+the half that can only be caught where the line is written. `SharedReaderIsPortableTest`
+rejects two things. The first is an import outside the framework, the namespace and a
+declared host contract, which today is `App\Models\AiMemoryStatSnapshot`. The second is a
+`config()` key outside `aimemory.*`, or one this app's `config/aimemory.php` does not
+declare. Each would work here and fail only after the copy is synced. Three reversions
+were measured red: an app-only import, an undeclared `aimemory.*` key, and a key outside
+it.
+
+`CLAUDE.md`/`AGENTS.md` gain the rule where an editor will see it. The queue's last item,
+whether samirhv-site keeps its module, leaves the queue decided. The runbook's "healthy
+run" said 89 tests. That was already stale before this change, and it now says the
+measured 108 (107 passed, 1 skipped, 272 assertions).
+
 ## 0.1.18 - the reader classes take their date format and UI language from the host app
 
 `app/Services/AiMemory/` is about to be copied byte-for-byte into samirhv-site, and on

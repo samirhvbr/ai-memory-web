@@ -133,7 +133,8 @@ days it spans rather than a nominal seven.
 
 ## ADR-005 — Extract the module into its own repository, as a standalone app
 
-**Status:** `ACCEPTED` · 05/09/2026
+**Status:** `ACCEPTED` · 05/09/2026 · its consequence that the two copies drift
+apart is superseded by [ADR-006](#adr-006)
 
 **Context.** The panel lived as the `AI-MEMORY` module inside samirhv-site: an
 admin area of a personal downloads site, coupled to that app's layout, auth,
@@ -159,3 +160,53 @@ If samirhv-site's module is retired in favour of this app, that is a new ADR.
 carves out end-user-facing strings as product i18n for a Brazilian audience;
 that carve-out does not apply — this is a developer tool published publicly,
 whose operator is also its reader.
+
+---
+
+## ADR-006 — The reader classes are the source of samirhv-site's copy, kept byte-identical
+
+**Status:** `ACCEPTED` · 24/09/2026
+
+**Context.** ADR-005 accepted a fork. It expected the two copies to drift, and
+by September they had: the eleven classes under `app/Services/AiMemory/`
+differed from samirhv-site's in 217 lines. Measured on 24/09/2026, 179 of those
+lines were comments (English here, Portuguese there). The other 38 were three
+product choices written into the classes themselves: the fallback timezone,
+the default date format and the language of the UI text. None of the 38 was a
+bug fix that one side had and the other lacked. Nothing was forcing a
+convergence yet, and that is the reason to decide now, before a fix lands on
+one side only.
+
+On 23/09 the owner decided to keep both screens, with this app as the source.
+On 24/09 he chose how: a **synced copy, plus a check that fails when the two
+differ**. The alternatives were a Composer package in a new private repository
+(one more repository and release cycle, the coupling ADR-005 had already
+rejected) and leaving the copies apart.
+
+**Decision.**
+
+1. `app/Services/AiMemory/*.php` here is the source. samirhv-site keeps a
+   **byte-identical** copy of those files, pinned to a commit of this
+   repository by a manifest. The copy is made by a script there, never by hand.
+2. **Nothing app-specific lives in those classes.** The display timezone, the
+   default date format and the UI language come from `config/aimemory.php`
+   (`timezone`, `date_format`, `locale`). UI text goes through `__()` with the
+   English sentence as the key, so this app needs no translation file and
+   samirhv-site ships a `pt_BR` JSON translation.
+3. **The classes depend only on the framework and on a declared host
+   contract.** Today the contract is one class, `App\Models\AiMemoryStatSnapshot`,
+   because each app owns its snapshot table. `SharedReaderIsPortableTest` holds
+   this rule here: it rejects an import outside the contract, and it rejects a
+   config key that `config/aimemory.php` does not declare.
+4. **The check that fails on divergence lives in the consumer.** samirhv-site's
+   suite fails on a local edit to its copy, and on a string or config key it
+   has not declared. Its CI also fails when this repository's `master` no longer
+   matches the pinned copy.
+
+**Consequences.** A change to these classes here is not finished until
+samirhv-site is re-synced. Until then its CI is red, and that is the intended
+signal. Comments are English on both sides, because the copy carries this
+file's bytes. A class that one app needs and the other does not belongs outside
+`app/Services/AiMemory/`. Adding an entry to the host contract is a change to
+this ADR.
+

@@ -8,19 +8,10 @@
 
 ## What is left
 
-### 1. Whether samirhv-site keeps its module — **owner's call**
-
-[ADR-005](../docs/decisions.md#adr-005) accepted a fork: the same code now
-exists in `samirhvbr/samirhv-site` and here, and the two will drift. The panel
-is already reachable at `samirhv.com.br/admin/ai-memory`.
-
-The decision that is open is not technical: whether that admin tab is retired in
-favour of this app, or both are kept on purpose. Either way it becomes a new
-ADR, and retiring it is a change to *that* repository, not this one.
-
-> Note, if it is retired: the module's CSS was moved out of the Blade templates
-> into `public/css/admin/` there on 05/09/2026, **after** this extraction was
-> copied. The two are the same rules, differently packaged.
+Nothing is queued. The last item, whether samirhv-site keeps its module, was
+decided on 23–24/09/2026: both stay, this app is the source, and samirhv-site
+keeps a byte-identical copy of the reader classes, synced by a script and
+checked by its CI ([ADR-006](../docs/decisions.md#adr-006)).
 
 ## Not queue — deliberately out of scope
 

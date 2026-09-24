@@ -274,12 +274,14 @@ Three things about that command line are load-bearing:
   `composer install` is what the container uses. No `composer` step is needed
   inside it.
 
-A healthy run today is **89 tests, 201 assertions, 1 skipped**. The one skip is
+A healthy run today is **108 tests, 272 assertions, 1 skipped** (measured on
+24/09/2026, 0.1.19). The one skip is
 `AiMemorySchemaCanaryTest`, disarmed until there is a real index to point it at.
 Any other skip means the environment is lying to you about being green.
 
-With the canary armed as well (§9.1) the honest number is **89 passed, 0
-skipped** — measured on `blue3site` on 11/09/2026. Note what that means for the
+With the canary armed as well (§9.1) the honest number is **every test
+passed, 0 skipped**. It was 89 of 89 when last measured on `blue3site`, on
+11/09/2026. Note what that means for the
 recipe: `php artisan test` alone leaves the canary disarmed, because
 `phpunit.xml` deliberately blanks `AI_MEMORY_SQLITE_PATH` so no test can read a
 real index by accident. Arming is a separate variable, and running the suite

@@ -84,6 +84,13 @@ must never write to.
   `public/js/dashboard.js` (JS). They must agree or the chart's axis jumps on
   the first live poll. Change one, change the other; a test asserts the JS copy
   is still there.
+- **`app/Services/AiMemory/` also runs in samirhv-site**, byte-for-byte
+  ([ADR-006](docs/decisions.md#adr-006)). A change there is finished when
+  samirhv-site is re-synced, and its CI stays red until then. Anything that may
+  differ between the two apps (timezone, date format, UI language) goes in
+  `config/aimemory.php` or a translation, never in the class.
+  `SharedReaderIsPortableTest` rejects an import or a config key the other app
+  would not have.
 - **Everything the panel renders is untrusted.** Page bodies and observation
   titles were written by coding agents. Markdown is rendered with HTML escaped
   and unsafe links dropped; the search snippet escapes **before** swapping
