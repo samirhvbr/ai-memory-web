@@ -10,8 +10,11 @@ use Illuminate\Support\Carbon;
  * display timezone (config `aimemory.timezone`) and format it. Static on
  * purpose, so Blade can call it directly.
  *
- * Formats are ISO-ish (Y-m-d) rather than locale-specific: this panel is read
- * by operators, and 03-04 must never be ambiguous between March and April.
+ * The default format and the UI language come from the host app's config
+ * (`aimemory.date_format`, `aimemory.locale`), never from this class: the class
+ * is copied byte-for-byte into samirhv-site, which reads d/m/Y in Portuguese
+ * (ADR-006). This app's own default is ISO-ish (Y-m-d) because its panel is
+ * read by operators, and 03-04 must never be ambiguous between March and April.
  */
 class AiMemoryTime
 {
@@ -25,9 +28,11 @@ class AiMemoryTime
             ->timezone((string) config('aimemory.timezone', 'UTC'));
     }
 
-    /** Formatted date/time, or "—" when empty. */
-    public static function format(int|float|null $micros, string $format = 'Y-m-d H:i'): string
+    /** Formatted date/time, or "—" when empty. No format given = `aimemory.date_format`. */
+    public static function format(int|float|null $micros, ?string $format = null): string
     {
+        $format ??= (string) config('aimemory.date_format', 'Y-m-d H:i');
+
         return self::toCarbon($micros)?->format($format) ?? '—';
     }
 
@@ -46,7 +51,7 @@ class AiMemoryTime
         }
         $b = self::toCarbon($end);
         if ($b === null) {
-            return 'still open';
+            return __('still open', [], config('aimemory.locale'));
         }
 
         $seconds = abs($b->getTimestamp() - $a->getTimestamp());

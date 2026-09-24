@@ -7,6 +7,44 @@ literally the commit subject.**
 Bodies are narrative: what changed, why, and what was measured. This file is
 never rewritten.
 
+## 0.1.18 - the reader classes take their date format and UI language from the host app
+
+`app/Services/AiMemory/` is about to be copied byte-for-byte into samirhv-site, and on
+24/09/2026 the owner chose that over a Composer package: a synced copy, with a check that
+fails when the two differ (ADR-006 comes in the next entry). Measured before touching
+anything: the eleven classes differed in **217 lines** between the two repositories.
+**179 were comments** (English here, Portuguese there). The other 38 were three product
+choices that had been written into the classes themselves:
+
+| What | Here | samirhv-site |
+|---|---|---|
+| fallback display timezone | `UTC` | `America/Sao_Paulo` |
+| default date format | `Y-m-d H:i` | `d/m/Y H:i` |
+| UI text (the notice, "still open") | English | Portuguese |
+
+A byte-identical copy cannot carry any of them, so they leave the classes:
+
+- **Date format** → `config('aimemory.date_format')`, `Y-m-d H:i` here. `format()` still
+  takes an explicit format, and one given wins.
+- **UI text** → `__()` with the English sentence as the key and
+  `config('aimemory.locale')` as the language (null = the app locale). This app needs no
+  translation file. A host that speaks another language ships a JSON translation. The
+  placeholders (`:path`, `:dir`, `:message`) replace the old string interpolation, so a
+  translated notice still names the file.
+- **Timezone** → unchanged. The classes already read `config('aimemory.timezone')`. Only
+  the fallback differed, and both apps declare the key, so the fallback never ran.
+
+The locale is a config key, not the request locale, on purpose: samirhv-site's admin
+routes render in the bare (English) locale while their text is Portuguese.
+
+Nothing changes on this app's screens: with no `aimemory.locale`, `__()` returns the
+English key, and the default format is the one that was hard-coded. **Measured:** the
+suite is 105 passed, 1 skipped (the declared canary), in `php:8.4-cli` with
+`pdo_sqlite`, and `HostLanguageTest` adds four tests. They load a real JSON translation
+through the loader samirhv-site will use, and they check three things: an English-locale
+request still gets the configured language, a placeholder survives translation, and the
+default format comes from config.
+
 ## 0.1.17 - the permission lists follow repodocs: five commands move to ask, seven rules leave deny
 
 `rm -rf` and `curl`/`wget` piped into a shell leave `deny` and now ask for confirmation.

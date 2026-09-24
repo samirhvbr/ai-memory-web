@@ -48,6 +48,17 @@ return [
     // Timezone used to display timestamps (ai-memory stores UTC microseconds).
     'timezone' => env('AI_MEMORY_TIMEZONE', 'UTC'),
 
+    // Default format of AiMemoryTime::format(). ISO-ish on purpose: 03-04 must
+    // never be ambiguous between March and April.
+    'date_format' => env('AI_MEMORY_DATE_FORMAT', 'Y-m-d H:i'),
+
+    // Language of the UI text the reader classes produce (the notice, "still
+    // open"). Null = the app locale. The classes use the English sentence as
+    // the translation key, so English needs no file. This key and the one above
+    // exist because app/Services/AiMemory/ is copied byte-for-byte into
+    // samirhv-site, which renders Portuguese and d/m/Y (ADR-006).
+    'locale' => env('AI_MEMORY_LOCALE'),
+
     // How many days of history the dashboard charts show.
     'chart_days' => (int) env('AI_MEMORY_CHART_DAYS', 30),
 

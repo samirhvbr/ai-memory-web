@@ -87,15 +87,15 @@ class AiMemoryDatabase
         $path = $this->path();
 
         if ($path === '') {
-            return $this->fail('The database path (AI_MEMORY_SQLITE_PATH) is empty in this installation.');
+            return $this->fail($this->say('The database path (AI_MEMORY_SQLITE_PATH) is empty in this installation.'));
         }
 
         if (! is_file($path)) {
-            return $this->fail("The file [{$path}] does not exist on this host.");
+            return $this->fail($this->say('The file [:path] does not exist on this host.', ['path' => $path]));
         }
 
         if (! is_readable($path)) {
-            return $this->fail("The web server user has no read permission on [{$path}].");
+            return $this->fail($this->say('The web server user has no read permission on [:path].', ['path' => $path]));
         }
 
         try {
@@ -194,32 +194,44 @@ class AiMemoryDatabase
         $dir = $path !== '' ? dirname($path) : '';
 
         if (str_contains($message, 'attempt to write a readonly database')) {
-            return 'The database is in WAL mode and the web server user has no WRITE permission on the '
-                ."directory [{$dir}]. A WAL reader has to be able to create the `-shm`/`-wal` files when "
+            return $this->say('The database is in WAL mode and the web server user has no WRITE permission on the '
+                .'directory [:dir]. A WAL reader has to be able to create the `-shm`/`-wal` files when '
                 .'they do not exist — read permission on `memory.sqlite` alone is not enough. '
-                .'See docs/permissions.md.';
+                .'See docs/permissions.md.', ['dir' => $dir]);
         }
 
         if (str_contains($message, 'unable to open database file')) {
-            return "SQLite could not open [{$path}] or its `-wal`/`-shm` files — usually a missing read "
-                ."permission on one of them, or a missing traverse (x) permission on [{$dir}].";
+            return $this->say('SQLite could not open [:path] or its `-wal`/`-shm` files — usually a missing read '
+                .'permission on one of them, or a missing traverse (x) permission on [:dir].', ['path' => $path, 'dir' => $dir]);
         }
 
         if (str_contains($message, 'could not find driver')) {
-            return 'The PHP extension `pdo_sqlite` is not installed on this host.';
+            return $this->say('The PHP extension `pdo_sqlite` is not installed on this host.');
         }
 
         if (str_contains($message, 'database is locked')) {
-            return 'The database has been locked by another process for longer than `busy_timeout` — '
-                .'ai-memory may be in a long write cycle. Try again in a moment.';
+            return $this->say('The database has been locked by another process for longer than `busy_timeout` — '
+                .'ai-memory may be in a long write cycle. Try again in a moment.');
         }
 
         if (preg_match('/no such (table|column)/i', $message)) {
-            return 'The ai-memory schema in this version is missing a table/column this screen queries '
-                ."(driver detail: {$message}). Most likely an ai-memory version change.";
+            return $this->say('The ai-memory schema in this version is missing a table/column this screen queries '
+                .'(driver detail: :message). Most likely an ai-memory version change.', ['message' => $message]);
         }
 
-        return "Failed to query [{$path}]: {$message}";
+        return $this->say('Failed to query [:path]: :message', ['path' => $path, 'message' => $message]);
+    }
+
+    /**
+     * UI text in the host app's language. The English sentence is the key, so
+     * this app needs no translation file; a host that renders another language
+     * ships a JSON translation and names it in `aimemory.locale` — samirhv-site
+     * does, with `lang/pt_BR.json`, because this class is copied there
+     * byte-for-byte (ADR-006).
+     */
+    private function say(string $line, array $replace = []): string
+    {
+        return __($line, $replace, config('aimemory.locale'));
     }
 
     /**
