@@ -7,6 +7,28 @@ literally the commit subject.**
 Bodies are narrative: what changed, why, and what was measured. This file is
 never rewritten.
 
+## 0.1.21 - Take the patched symfony/http-foundation and league/commonmark, which `composer audit` reports against the lockfile
+
+`composer audit --locked` on `origin/master` (0.1.20) reported three advisories, measured 23/10/2026:
+
+- `symfony/http-foundation` v8.1.6 → v8.1.9. CVE-2026-108082: a ReDoS in `HeaderUtils::split()` that any
+  request reaches through its `Cache-Control` header, with no login. The fix is 8.1.7.
+- `league/commonmark` 2.10.0 → 2.10.4. Two advisories, both fixed after 2.10.1: `DisallowedRawHtml` is
+  bypassed when a disallowed tag name ends the raw HTML, and the GitHub-flavoured table extension takes
+  quadratic time on crafted input. The app renders an agent's Markdown (untrusted) in
+  `resources/views/ai-memory/page.blade.php` with `html_input => escape`, so the raw-HTML bypass is probably
+  not on that path (not measured); a crafted table is, and that is the denial of service.
+- Moved with them by `composer update -W`: `nette/schema` 1.4.0, `nette/utils` 4.1.6 and the polyfills
+  `mbstring` and `php80` 1.43.0.
+
+Composer also pruned four packages the lockfile still carried although `composer.json` no longer requires
+them and nothing in `app/`, `database/` or `tests/` uses them: `fakerphp/faker`, `laravel/agent-detector`,
+`laravel/pail` and `laravel/pao` (all dev only).
+
+**Not measured here:** the host this was written on has no `ext-pdo_sqlite`, which this app requires, so the
+dependencies could not be installed and the test suite could not be run locally; the lockfile was updated
+with `--no-install --ignore-platform-req=ext-pdo_sqlite`. The CI of this repository is the validation.
+
 ## 0.1.20 - the echo blocks are regenerated from repodocs
 
 The marked rules in `CLAUDE.md` and `AGENTS.md` are rewritten from the single
